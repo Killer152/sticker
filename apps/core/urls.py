@@ -1,10 +1,9 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import ImageViewSet, OrderFormsViewSet
+from django.urls import path
 
-router = DefaultRouter()
-router.register(r'images', ImageViewSet)
-router.register(r'order-forms', OrderFormsViewSet)
+from apps.core.views import ImageListCreateView, OrderFormListCreateView
+
 urlpatterns = [
-    path('', include(router.urls)),
+    path('images/', ImageListCreateView.as_view(), name='image-list-create'),
+    path('order-forms/', OrderFormListCreateView.as_view(), name='orderform-list-create'),
+
 ]

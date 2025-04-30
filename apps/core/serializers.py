@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from .models import Image, OrderForms
 
 
@@ -7,7 +8,7 @@ class ImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Image
-        fields = ['id', 'title', 'original_filename', 'upload_date', 'approved', 'image_url']
+        fields = ['id', 'upload_date', 'approved', 'image_url', 'image']
         read_only_fields = ['ip_address', 'upload_date', 'approved']
 
     def get_image_url(self, obj):
@@ -27,6 +28,6 @@ class OrderFormsSerializer(serializers.ModelSerializer):
         """
         Validate phone number format if needed
         """
-        if len(''.join(filter(str.isdigit, value))) < 12:
+        if len(''.join(filter(str.isdigit, value))) < 10:
             raise serializers.ValidationError("Phone number must have at least 10 digits")
         return value

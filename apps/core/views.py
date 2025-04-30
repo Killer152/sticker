@@ -2,12 +2,14 @@ import imghdr
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_image_file_extension
-from rest_framework import viewsets, status
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Image, OrderForms
 from .pagination import CustomPagination
-from .serializers import OrderFormsSerializer
+from .serializers import OrderFormsSerializer, ImageSerializer
 
 
 def get_client_ip(request):
@@ -54,28 +56,27 @@ def validate_image_format(image_file):
         return False, f"Error validating image: {str(e)}"
 
 
-class ImageViewSet(viewsets.ModelViewSet):
+class ImageListCreateView(APIView):
     """
-    API endpoint for handling images
+    API endpoint for listing and creating images
     """
-    queryset = Image.objects.all()
+    permission_classes = [AllowAny]
+    queryset = Image.objects.all().order_by('-upload_date')
+    serializer_class = ImageSerializer
     pagination_class = CustomPagination
 
-    def list(self, request, *args, **kwargs):
+    def get(self, request, format=None):
         """
         List only approved images for regular users.
-        Admins can see all images or filter by approval status.
         """
-        queryset = self.queryset.filter(approved=True)
-
-        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        queryset = Image.objects.filter(approved=True)
+        serializer = ImageSerializer(queryset, many=True, context={'request': request})
         return Response(serializer.data)
 
-    def create(self, request, *args, **kwargs):
+    def post(self, request, format=None):
         """
         Create a new image with IP check (one image per IP)
         """
-
         ip_address = get_client_ip(request)
 
         if Image.objects.filter(ip_address=ip_address).exists():
@@ -105,11 +106,10 @@ class ImageViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = self.get_serializer(data=request.data)
+        serializer = ImageSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(
                 ip_address=ip_address,
-                original_filename=image_file.name
             )
             return Response(
                 {
@@ -121,22 +121,21 @@ class ImageViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class OrderFormsViewSet(viewsets.ModelViewSet):
+class OrderFormListCreateView(APIView):
     """
     API endpoint for order forms
     """
+    permission_classes = [AllowAny]
     queryset = OrderForms.objects.all().order_by('-created_at')
     serializer_class = OrderFormsSerializer
 
-    def create(self, request, *args, **kwargs):
+    def post(self, request, format=None):
         """
         Create a new order form from POST data
         """
-        serializer = self.get_serializer(data=request.data)
+        serializer = OrderFormsSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response({
-                'message': 'Order form submitted successfully',
-                'data': serializer.data
-            }, status=status.HTTP_201_CREATED)
+                'message': 'Order form submitted successfully'}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
