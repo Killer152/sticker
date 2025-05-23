@@ -26,8 +26,12 @@ class OrderFormsSerializer(serializers.ModelSerializer):
 
     def validate_phone(self, value):
         """
-        Validate phone number format if needed
+        Remove all non-digit characters and validate phone number
         """
-        if len(''.join(filter(str.isdigit, value))) < 10:
-            raise serializers.ValidationError("Phone number must have at least 10 digits")
-        return value
+
+        digits_only = ''.join(filter(str.isdigit, value))
+
+        if len(digits_only) < 13:
+            raise serializers.ValidationError("Phone number must have at least 13 digits")
+
+        return digits_only
